@@ -1,13 +1,18 @@
+import ConfigParser
 import urllib2
 import urllib
 import GamezServerDao
 import Logger
 
 class RiveuServer(object):
-
-
-    def __init__(self, dbFile):
+    def __init__(self, dbFile, conffile):
         self.dbfile = dbFile
+
+        config = ConfigParser.RawConfigParser()
+        config.read(conffile)
+        self.consoles = config.get('GamezServer','consoles')
+        if self.consoles == '*':
+            self.consoles = []
 
     def UpdateConsoles(self):
         logger = Logger.Logger(self.dbfile)
@@ -16,7 +21,7 @@ class RiveuServer(object):
         webFile = urllib2.urlopen(url).read()
         dao = GamezServerDao.GamezServerDao()
         for console in webFile.split('\n'):
-            if(len(console) > 0):
+            if(len(console) > 0 and (not self.consoles or console.replace("\r","") in self.consoles)):
                 dao.AddConsole(self.dbfile, console.replace("\r",""))
         return
 
@@ -35,7 +40,8 @@ class RiveuServer(object):
                 releaseDate = str(gameAttributes[3]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
                 coverArt = str(gameAttributes[4]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
                 console = str(gameAttributes[5]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
-                dao.AddGame(self.dbfile, gameId, gameTitle, gameDescription, releaseDate, coverArt, console.replace("\r",""))
+                if console.replace("\r","") in self.consoles or not self.consoles:
+                    dao.AddGame(self.dbfile, gameId, gameTitle, gameDescription, releaseDate, coverArt, console.replace("\r",""))
         return
 
     def SendNotification(self, message, username, password):

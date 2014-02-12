@@ -629,7 +629,7 @@ def RunGameSearch():
 
 def RunGameDBUpdater():
     logger.Log('Updating Console List')
-    riveuServer = GamezServer.RiveuServer.RiveuServer(dbfile)
+    riveuServer = GamezServer.RiveuServer.RiveuServer(dbfile, conffile)
     riveuServer.UpdateConsoles()
     logger.Log('Updating Games List')
     riveuServer.UpdateGames()
@@ -695,6 +695,7 @@ def CheckConfig():
         config.set('GamezServer', 'EnableAuth', '0')
         config.set('GamezServer', 'AuthUsername', "''")
         config.set('GamezServer', 'AuthPassword', "''")
+        config.set('GamezServer', 'Consoles', "''")
     else:
         if not config.has_option('GamezServer', 'EnableAuth'):
             config.set('GamezServer', 'EnableAuth', '0')
