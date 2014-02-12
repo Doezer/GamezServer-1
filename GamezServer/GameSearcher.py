@@ -44,12 +44,13 @@ class GameSearcher(object):
 
     def SendToSab(self, url, nzbName, gameId):
         config = ConfigParser.RawConfigParser()
-        apikey = "107c2ec867c2e8c725ce42a23801fd7c"
         config.read(self.conffile)
+        sabBaseurl = str(config.get('Sabnzbd', 'SabnzbdHostUrl')).replace("'","")
+        apiKey = str(config.get('Sabnzbd', 'SabnzbdApiKey')).replace("'","")
         category = str(config.get('Sabnzbd','SabnzbdCategory')).replace("'","")
         if(category <> ''):
             category = '&cat=' + category
-        sabUrl = "http://192.168.1.102:9001/sabnzbd/api?apikey=" + apikey + "&mode=addurl&name=" + urllib.quote_plus(url) + "&script=gamezPostProcess.py&nzbname=[" + gameId + "] - " + nzbName + category
+        sabUrl = sabBaseurl + "/sabnzbd/api?apikey=" + apiKey + "&mode=addurl&name=" + urllib.quote_plus(url) + "&script=gamezPostProcess.py&nzbname=[" + gameId + "] - " + nzbName + category
         responseObject = urllib.FancyURLopener({}).open(sabUrl)
         responseObject.read()
         responseObject.close()
