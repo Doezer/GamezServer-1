@@ -767,7 +767,7 @@ def CheckConfig():
         config.write(configfile)
 
 version = Constants.VersionNumber()
-app_path = os.path.join(os.path.dirname(__file__))
+app_path = os.path.join(os.getcwd(), os.path.dirname(__file__))
 conffile = os.path.join(app_path,'GamezServer.ini')
 dbfile = os.path.join(app_path,'Gamez.db')
 logger = GamezServer.Logger.Logger(dbfile)
@@ -787,10 +787,23 @@ username = str(config.get('GamezServer','authusername')).replace("'","")
 password = str(config.get('GamezServer','authpassword')).replace("'","")
 validation = cherrypy.lib.auth_basic.checkpassword_dict({username : password})
 conf = {
-            '/':{'tools.auth_basic.on':enableAuthentication,'tools.auth_basic.realm':'GamezServer','tools.auth_basic.checkpassword':validation},
-            '/css': {'tools.staticdir.on':True,'tools.staticdir.dir':css_path},
-            '/js':{'tools.staticdir.on':True,'tools.staticdir.dir':js_path},
-            '/images':{'tools.staticdir.on':True,'tools.staticdir.dir':images_path}
+            '/': {
+                'tools.auth_basic.on': enableAuthentication,
+                'tools.auth_basic.realm': 'GamezServer',
+                'tools.auth_basic.checkpassword': validation
+            },
+            '/css': {
+                'tools.staticdir.on':True,
+                'tools.staticdir.dir': css_path
+            },
+            '/js': {
+                'tools.staticdir.on':True, 
+                'tools.staticdir.dir': js_path
+            },
+            '/images': {
+                'tools.staticdir.on':True,
+                'tools.staticdir.dir':images_path
+            }
         }
 
 dao = GamezServer.GamezServerDao.GamezServerDao()
