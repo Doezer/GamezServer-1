@@ -256,7 +256,7 @@ class RunWebServer(object):
         return content
 
     @cherrypy.expose
-    def processAddGame(self,game=None):
+    def processAddGame(self, game=None, consoleselect=None):
         consolelist = dao.GetConsoles(dbfile)
         console = ""
         for row in consolelist:
@@ -269,8 +269,7 @@ class RunWebServer(object):
         raise cherrypy.HTTPRedirect("/?redirect=gameadded")
 
     @cherrypy.expose
-    def processBulkAddGame(self,consoleselect=None):
-        print(consoleselect)
+    def processBulkAddGame(self, consoleselect=None):
         dao.BulkAddByConsole(dbfile, str(consoleselect))
         raise cherrypy.HTTPRedirect("/?redirect=gameadded")
 
