@@ -1,0 +1,4 @@
+*.pyc
+/Gamez.db
+/Gamez.db-journal
+/GamezServer.ini
