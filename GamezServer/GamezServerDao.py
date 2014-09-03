@@ -31,7 +31,7 @@ class GamezServerDao(object):
 
     def UpdateGameStatus(self, dbFile, gameId,status):
         conn = sqlite3.connect(dbFile)
-        comm = "UPDATE GAMES SET Status='" + str(status) + "' WHERE GameID=" + str(gameId) + " AND IsDeleted=0"
+        comm = "UPDATE GAMES SET Status='" + status + "' WHERE GameID=" + gameId + " AND IsDeleted=0"
         conn.execute(comm)
         conn.commit()
         conn.close()
@@ -39,7 +39,7 @@ class GamezServerDao(object):
 
     def DeleteGame(self, dbFile, gameId):
         conn = sqlite3.connect(dbFile)
-        comm = "UPDATE GAMES SET IsDeleted=1 WHERE GameID=" + str(gameId) + " AND IsDeleted=0"
+        comm = "UPDATE GAMES SET IsDeleted=1 WHERE GameID=" + gameId + " AND IsDeleted=0"
         conn.execute(comm)
         conn.commit()
         conn.close()
@@ -47,7 +47,7 @@ class GamezServerDao(object):
 
     def UpdateGameLocation(self, dbFile, gameId,location):
         conn = sqlite3.connect(dbFile)
-        comm = "UPDATE GAMES SET Location='" + str(location) + "' WHERE GameID=" + str(gameId) + " AND IsDeleted=0"
+        comm = "UPDATE GAMES SET Location='" + location + "' WHERE GameID=" + gameId + " AND IsDeleted=0"
         conn.execute(comm)
         conn.commit()
         conn.close()
@@ -102,7 +102,7 @@ class GamezServerDao(object):
         insertedId = None
         conn = sqlite3.connect(dbFile)
         cursor=conn.cursor()
-        comm = "INSERT OR IGNORE INTO MASTER_GAMES(GameDevID,GameTitle,GameDescription,ConsoleID,ReleaseDate,CoverArtUri) VALUES('" + str(gameId).replace("'","''") + "','" + gameTitle.replace("'","''") + "','" + gameDescription.replace("'","''") + "',(SELECT ConsoleID FROM CONSOLES WHERE ConsoleName='" + console.replace("'","''") + "' AND IsDeleted=0),'" + releaseDate + "','" + str(coverArtUri).replace("'","''") + "');"
+        comm = "INSERT OR IGNORE INTO MASTER_GAMES(GameDevID,GameTitle,GameDescription,ConsoleID,ReleaseDate,CoverArtUri) VALUES('" + gameId.replace("'","''") + "','" + gameTitle.replace("'","''") + "','" + gameDescription.replace("'","''") + "',(SELECT ConsoleID FROM CONSOLES WHERE ConsoleName='" + console.replace("'","''") + "' AND IsDeleted=0),'" + releaseDate + "','" + coverArtUri.replace("'","''") + "');"
         cursor.execute(comm)
         conn.commit()
         insertedId = cursor.lastrowid
@@ -128,7 +128,8 @@ class GamezServerDao(object):
 
     def AddWantedGame(self, dbFile, console, gameTitle):
         conn = sqlite3.connect(dbFile)
-        comm = "INSERT INTO GAMES (MasterGameID,Status) VALUES((SELECT MasterGameID FROM MASTER_GAMES WHERE GameTitle='" + str(gameTitle) + "' AND ConsoleID=(SELECT ConsoleID FROM CONSOLES WHERE ConsoleName='" + str(console) + "' AND IsDeleted=0) AND IsDeleted=0),'Wanted')"
+        gameTitle = gameTitle.replace("'", "\'\'")
+        comm = "INSERT INTO GAMES (MasterGameID,Status) VALUES((SELECT MasterGameID FROM MASTER_GAMES WHERE GameTitle='" + gameTitle + "' AND ConsoleID=(SELECT ConsoleID FROM CONSOLES WHERE ConsoleName='" + console + "' AND IsDeleted=0) AND IsDeleted=0),'Wanted')"
         conn.execute(comm)
         conn.commit()
         conn.close()
@@ -138,14 +139,22 @@ class GamezServerDao(object):
         masterGameList = self.GetMasterGames(dbFile)
         gameList = self.GetGames(dbFile)
         for row in masterGameList:
-            masterConsole = str(row[3])
+            masterConsole = row[3]
             if(masterConsole == console):
-                masterTitle = str(row[1])
+                masterTitle = row[1]
                 gameExists = False
                 for game in gameList:
-                    gameConsole = str(game[4])
-                    gameTitle = str(game[1])
+                    gameConsole = game[4]
+                    gameTitle = game[1]
                     if(gameConsole == masterConsole and gameTitle == masterTitle):
                         gameExists = True
                 if(gameExists == False):
                     self.AddWantedGame(dbFile, console, masterTitle.replace("'","''"))
+    
+    def GetConsoleByGame(self, dbFile, game):
+        conn = sqlite3.connect(dbFile)
+        comm = "SELECT ConsoleName from CONSOLES WHERE ConsoleID = (SELECT ConsoleID from MASTER_GAMES WHERE GameTitle = '" + game + "')"
+        print comm
+        result = conn.execute(comm).fetchone()
+        conn.close()
+        return result

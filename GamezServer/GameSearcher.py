@@ -4,6 +4,7 @@ import urllib2
 import json
 import urllib
 import ConfigParser
+import unicodedata
 
 class GameSearcher(object):
     """description of class"""
@@ -18,7 +19,7 @@ class GameSearcher(object):
             logger.Log("Starting Search")
             dao = GamezServerDao.GamezServerDao()
             for row in dao.GetWantedGames(self.dbfile):
-                gameTitle = str(row[1])
+                gameTitle = row[1]
                 console = str(row[4])
                 gameId = str(row[8])
                 logger.Log("Searching for game: " + gameTitle + " - " + console)
@@ -44,13 +45,12 @@ class GameSearcher(object):
 
     def SendToSab(self, url, nzbName, gameId):
         config = ConfigParser.RawConfigParser()
+        apikey = "96febf6555fbcb72fdee5c0f63a294f8"
         config.read(self.conffile)
-        sabBaseurl = str(config.get('Sabnzbd', 'SabnzbdHostUrl')).replace("'","")
-        apiKey = str(config.get('Sabnzbd', 'SabnzbdApiKey')).replace("'","")
         category = str(config.get('Sabnzbd','SabnzbdCategory')).replace("'","")
         if(category <> ''):
             category = '&cat=' + category
-        sabUrl = sabBaseurl + "/sabnzbd/api?apikey=" + apiKey + "&mode=addurl&name=" + urllib.quote_plus(url) + "&script=gamezPostProcess.py&nzbname=[" + gameId + "] - " + nzbName + category
+        sabUrl = "http://127.0.0.1:8080/sabnzbd/api?apikey=" + apikey + "&mode=addurl&name=" + urllib.quote_plus(url) + "&script=gamezPostProcess.py&nzbname=[" + gameId + "] - " + nzbName + category
         responseObject = urllib.FancyURLopener({}).open(sabUrl)
         responseObject.read()
         responseObject.close()
@@ -61,6 +61,9 @@ class GameSearcher(object):
         enable = False
         config = ConfigParser.RawConfigParser()
         config.read(self.conffile)
+        print gameTitle
+        gameTitle = unicodedata.normalize('NFKD', gameTitle).encode('ascii','ignore')
+        print gameTitle
         apiKey = str(config.get('UsenetCrawler','UsenetCrawlerApiKey')).replace("'","")
         if(config.get('UsenetCrawler','EnableUsenetCrawler') == "1"):
             enable = True

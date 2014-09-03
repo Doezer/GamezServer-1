@@ -3,6 +3,7 @@ import urllib2
 import urllib
 import GamezServerDao
 import Logger
+import os
 
 class RiveuServer(object):
     def __init__(self, dbFile, conffile):
@@ -17,10 +18,12 @@ class RiveuServer(object):
     def UpdateConsoles(self):
         logger = Logger.Logger(self.dbfile)
         logger.Log('Downloading Console List')
-        url = 'http://www.riveu.com/GamezServer/consoles.txt'
-        webFile = urllib2.urlopen(url).read()
+        dn = os.path.dirname(os.path.realpath(__file__))
+        fn = os.path.join(dn,"consoles.txt")
+        openConsoleFile = open(fn, 'r')
+        consoleFile = openConsoleFile.read()
         dao = GamezServerDao.GamezServerDao()
-        for console in webFile.split('\n'):
+        for console in consoleFile.split('\n'):
             if(len(console) > 0 and (not self.consoles or console.replace("\r","") in self.consoles)):
                 dao.AddConsole(self.dbfile, console.replace("\r",""))
         return
@@ -28,13 +31,16 @@ class RiveuServer(object):
     def UpdateGames(self):
         logger = Logger.Logger(self.dbfile)
         logger.Log('Downloading Games List')
-        url = 'http://www.riveu.com/GamezServer/games.txt'
-        webFile = urllib2.urlopen(url).read()
+        dn = os.path.dirname(os.path.realpath(__file__))
+        fn = os.path.join(dn,"games.txt")
+        openGamesFile = open(fn, 'r')
+        gamesFile = openGamesFile.read()
         dao = GamezServerDao.GamezServerDao()
-        for game in webFile.split('\n'):
+        for game in gamesFile.split('\n'):
             if(len(game) > 0):
                 gameAttributes = game.split('::||::')
                 gameId = gameAttributes[0].decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
+                logger.Log(gameId)
                 gameTitle = str(gameAttributes[1]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
                 gameDescription = str(gameAttributes[2]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')
                 releaseDate = str(gameAttributes[3]).decode("utf-8").replace(u'\ufeff','').replace(u'\xa0',' ').replace(u'\xb7','').replace(u'\xb2','').replace(u'\u2161','').replace(u'\u2164','')

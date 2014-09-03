@@ -3,6 +3,7 @@ import os
 import ConfigParser
 import GamezServer.GamezServerDao
 import GamezServer.RiveuServer
+import GamezServer.GamesDBReader
 import GamezServer.PostProcessor
 import GamezServer.Logger
 import GamezServer.GameSearcher
@@ -19,7 +20,7 @@ class RunWebServer(object):
         cherrypy.engine.subscribe('stop', self.stop)
 
     @cherrypy.expose
-    def index(self,redirect=None):
+    def index(self,redirect=None, *args, **kwargs):
         updater = GamezServerUpdater.GamezServerUpdater(dbfile)
         gamesList = dao.GetGames(dbfile)
         content = ""
@@ -35,6 +36,12 @@ class RunWebServer(object):
         content = content + "       <script src=\"js/jquery-1.9.1.js\" type=\"text/javascript\"></script>"
         content = content + "       <script src=\"js/jquery-ui-1.10.3.custom.js\" type=\"text/javascript\"></script>"
         content = content + "       <script src=\"js/jquery.dataTables.js\" type=\"text/javascript\"></script>"
+        content = content + "       <script src=\"js/jqueryshorten.js\" type=\"text/javascript\"></script>"
+        content = content + "       <script type=\"text/javascript\">"
+        content = content + "       $(document).ready(function() {"
+        content = content + "       $(\".comment\").shorten();"
+        content = content + "       });"
+        content = content + "       </script>"
         content = content + "   </head>"
         content = content + "   <body style=\"background: url(/images/bgnoise_lg.png) repeat left top;width:100%\">"
         content = content + "   <form method=\"post\" action=\"https://www.paypal.com/cgi-bin/webscr\">"
@@ -46,17 +53,16 @@ class RunWebServer(object):
         content = content + "                   <td>"
         content = content + "                       <table id=\"logGrid\" width=\"100%\" class=\"display\"><thead><tr><th>Cover</th><th>Game Title</th><th>Game ID</th><th>Game Description</th><th>Console</th><th>Release Date</th><th>Status</th><th>Location</th><th>Commands</th></tr></thead><tbody>"
         for row in gamesList:
-            try:
-                gameId = str(row[8])
-                statusValue = str(row[6])
-                statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + gameId + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\">Downloaded</option><option value=\"Snatched\">Snatched</option><option value=\"Wanted\" selected>Wanted</option></select>"
-                if(statusValue == 'Snatched'):
-                    statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + gameId + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\">Downloaded</option><option value=\"Snatched\" selected>Snatched</option><option value=\"Wanted\">Wanted</option></select>"
-                if(statusValue == 'Downloaded'):
-                    statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + gameId + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\" selected>Downloaded</option><option value=\"Snatched\">Snatched</option><option value=\"Wanted\">Wanted</option></select>"
-                content = content + "                       <tr><td><image  onError=\"this.onerror=null;this.src='images/noCoverArt.gif';\" style=\"width:125px;height:200px\" src=\"" + str(row[0]) + "\" alt=\"Cover Image\" /></td><td>" + str(row[1]) + "</td><td>" + str(row[2]) + "</td><td>" + str(row[3]) + "</td><td>" + str(row[4]) + "</td><td>" + str(row[5]) + "</td><td>" + statusDropDown + "</td><td>" + str(row[7]) + "</td><td><a href=\"/deletegame?game_id=" + gameId + "\">Delete</a></td></tr>"
-            except:
-                logger.Log("Unable to show game because there is unicode error in description: " + str(row[1]))
+            gameId = row[8]
+            statusValue = row[6]
+            statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + str(gameId) + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\">Downloaded</option><option value=\"Snatched\">Snatched</option><option value=\"Wanted\" selected>Wanted</option></select>"
+            if(statusValue == 'Snatched'):
+                statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + str(gameId) + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\">Downloaded</option><option value=\"Snatched\" selected>Snatched</option><option value=\"Wanted\">Wanted</option></select>"
+            if(statusValue == 'Downloaded'):
+                statusDropDown = "<select onchange=\"window.location = '/updatestatus?game_id=" + str(gameId) + "&filePath=&status=' + this.value;\"><option value=\"Downloaded\" selected>Downloaded</option><option value=\"Snatched\">Snatched</option><option value=\"Wanted\">Wanted</option></select>"
+            content = content + "                       <tr><td><image  onError=\"this.onerror=null;this.src='images/noCoverArt.gif';\" style=\"width:125px;height:200px\" src=\"" + row[0] + "\" alt=\"Cover Image\" /></td><td>" + row[1] + "</td><td>" + row[2] + "</td><td><div class=\"comment\">" + row[3] + "</div></td><td>" + row[4] + "</td><td>" + row[5] + "</td><td>" + statusDropDown + "</td><td>" + str(row[7]) + "</td><td><a href=\"/deletegame?game_id=" + str(gameId) + "\">Delete</a></td></tr>"
+            #except:
+                #logger.Log("Unable to show game because there is unicode error in description: " + str(row[1]))
         content = content + "                       </tbody></table>"
         content = content + "                   </td>"
         content = content + "               </tr>"
@@ -72,23 +78,26 @@ class RunWebServer(object):
         if(redirect=='gamedeleted'):
             content = content + "<script>$('#statusmessage').text('Game Deleted From Wanted List...').animate({'margin-bottom':0},200);setTimeout( function(){$('#statusmessage').animate({'margin-bottom':-25},200);}, 5*1000);</script>"
         if(redirect=='statusupdated'):
-            content = content + "<script>$('#statusmessage').text('Gamed Status Updated...').animate({'margin-bottom':0},200);setTimeout( function(){$('#statusmessage').animate({'margin-bottom':-25},200);}, 5*1000);</script>"
+            content = content + "<script>$('#statusmessage').text('Game Status Updated...').animate({'margin-bottom':0},200);setTimeout( function(){$('#statusmessage').animate({'margin-bottom':-25},200);}, 5*1000);</script>"
         if(str(redirect).find("Successfully Upgraded to Version") <> -1):
            content = content + "<script>$('#statusmessage').text('" + str(redirect) + "').animate({'margin-bottom':0},200);setTimeout( function(){$('#statusmessage').animate({'margin-bottom':-25},200);}, 5*1000);</script>"
+        dbReader = GamezServer.GamesDBReader.GamesDBReader(dbfile)
+        if(dbReader.ReturnFullUpdate()):
+            content = content + "<script>$('#statusmessage').text('There is a Full Update occuring! You might notice slow responses or games missing...').animate({'margin-bottom':0},200);</script>"
         content = content + "   </form>"
         content = content + "   </body>"
         content = content + "</html>"
         return content
 
     @cherrypy.expose
-    def updategamezserver(self):
+    def updategamezserver(self, *args, **kwargs):
         updater = GamezServerUpdater.GamezServerUpdater(dbfile)
         updateResult = updater.Update(app_path)
         raise cherrypy.HTTPRedirect("/?redirect=" + updateResult)
         return
 
     @cherrypy.expose
-    def mastergames(self):
+    def mastergames(self, *args, **kwargs):
         gamesList = dao.GetMasterGames(dbfile)
         content = ""
         content = content + "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">"
@@ -133,7 +142,7 @@ class RunWebServer(object):
         return content
 
     @cherrypy.expose
-    def addgame(self):
+    def addgame(self, *args, **kwargs):
         gamelist = dao.GetMasterGames(dbfile)
         consolelist = dao.GetConsoles(dbfile)
         content = ""
@@ -192,7 +201,7 @@ class RunWebServer(object):
         content = content + "<script>"
         content = content + "var availableGames = ["
         for row in gamelist:
-            content = content + '"' + str(row[1]).replace("\r","") + " - " + str(row[3]) + '",'
+            content = content + '"' + row[1].replace("\r","") + " - " + row[3] + '",'
         content = content + "];"
 
         content = content + "function CheckValidation(){var gameVal = availableGames.indexOf(document.getElementById('game').value);if(gameVal == -1){alert('Please Enter A Valid Game');return false;}else{return true;}}</script>"
@@ -204,7 +213,7 @@ class RunWebServer(object):
         return content
 
     @cherrypy.expose
-    def bulkaddgame(self):
+    def bulkaddgame(self, *args, **kwargs):
         consolelist = dao.GetConsoles(dbfile)
         content = ""
         content = content + "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">"
@@ -256,20 +265,21 @@ class RunWebServer(object):
         return content
 
     @cherrypy.expose
-    def processAddGame(self, game=None, consoleselect=None):
+    def processAddGame(self,game=None, **kwargs):
         consolelist = dao.GetConsoles(dbfile)
-        console = ""
-        for row in consolelist:
-            if(str(game).find(str(row[0])) <> -1):
-                console = str(row[0])
+        gameArray = game.split(" - ")
+        game = gameArray[0]
+        console = gameArray[1]
+        #console = dao.GetConsoleByGame(dbfile, game)
+        logger.Log("Game: " + game + " Console: " + console)
         if(console <> ""):
-            game = str(game).replace(" - " + console, "")
             dao.AddWantedGame(dbfile,console,game)
             thread.start_new_thread(RunGameSearch, ())
         raise cherrypy.HTTPRedirect("/?redirect=gameadded")
 
     @cherrypy.expose
-    def processBulkAddGame(self, consoleselect=None):
+    def processBulkAddGame(self,consoleselect=None, *args, **kwargs):
+        print(consoleselect)
         dao.BulkAddByConsole(dbfile, str(consoleselect))
         raise cherrypy.HTTPRedirect("/?redirect=gameadded")
 
@@ -280,7 +290,7 @@ class RunWebServer(object):
         logger.Log("Web Server Started")
 
     @cherrypy.expose
-    def log(self,redirect=None):
+    def log(self,redirect=None, *args, **kwargs):
         logResult = dao.GetLogMessages(dbfile)
         content = ""
         content = content + "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">"
@@ -328,7 +338,7 @@ class RunWebServer(object):
         return content
 
     @cherrypy.expose
-    def settings(self,redirect=None):
+    def settings(self,redirect=None, *args, **kwargs):
         config = ConfigParser.RawConfigParser()
         config.read(conffile)
         enableAuthChecked = ""
@@ -594,12 +604,12 @@ class RunWebServer(object):
         raise cherrypy.HTTPRedirect("/log?redirect=logcleared")
 
     @cherrypy.expose
-    def deletegame(self, game_id):
+    def deletegame(self, game_id, *args, **kwargs):
         dao.DeleteGame(dbfile, game_id)
         raise cherrypy.InternalRedirect('/?redirect=gamedeleted')
 
     @cherrypy.expose
-    def updatestatus(self,game_id='',status='',filePath=''):
+    def updatestatus(self,game_id='',status='',filePath='', *args, **kwargs):
         logger.Log('Updating Game Status')
         dao.UpdateGameStatus(dbfile, game_id, status)
         if(status=='Downloaded'):
@@ -628,11 +638,14 @@ def RunGameSearch():
     return
 
 def RunGameDBUpdater():
+    dbReader = GamezServer.GamesDBReader.GamesDBReader(dbfile)
     logger.Log('Updating Console List')
-    riveuServer = GamezServer.RiveuServer.RiveuServer(dbfile, conffile)
-    riveuServer.UpdateConsoles()
+    dbReader.RetrievePlatformList()
+    # riveuServer = GamezServer.RiveuServer.RiveuServer(dbfile)
+    # riveuServer.UpdateConsoles()
     logger.Log('Updating Games List')
-    riveuServer.UpdateGames()
+    dbReader.RetrieveGameList()
+    # riveuServer.UpdateGames()
 
 def GenerateSabPostProcessScript():
     config = ConfigParser.RawConfigParser()
@@ -695,7 +708,6 @@ def CheckConfig():
         config.set('GamezServer', 'EnableAuth', '0')
         config.set('GamezServer', 'AuthUsername', "''")
         config.set('GamezServer', 'AuthPassword', "''")
-        config.set('GamezServer', 'Consoles', "''")
     else:
         if not config.has_option('GamezServer', 'EnableAuth'):
             config.set('GamezServer', 'EnableAuth', '0')
@@ -768,7 +780,7 @@ def CheckConfig():
         config.write(configfile)
 
 version = Constants.VersionNumber()
-app_path = os.path.join(os.getcwd(), os.path.dirname(__file__))
+app_path = os.path.join(os.path.dirname(__file__))
 conffile = os.path.join(app_path,'GamezServer.ini')
 dbfile = os.path.join(app_path,'Gamez.db')
 logger = GamezServer.Logger.Logger(dbfile)
@@ -788,23 +800,10 @@ username = str(config.get('GamezServer','authusername')).replace("'","")
 password = str(config.get('GamezServer','authpassword')).replace("'","")
 validation = cherrypy.lib.auth_basic.checkpassword_dict({username : password})
 conf = {
-            '/': {
-                'tools.auth_basic.on': enableAuthentication,
-                'tools.auth_basic.realm': 'GamezServer',
-                'tools.auth_basic.checkpassword': validation
-            },
-            '/css': {
-                'tools.staticdir.on':True,
-                'tools.staticdir.dir': css_path
-            },
-            '/js': {
-                'tools.staticdir.on':True, 
-                'tools.staticdir.dir': js_path
-            },
-            '/images': {
-                'tools.staticdir.on':True,
-                'tools.staticdir.dir':images_path
-            }
+            '/':{'tools.auth_basic.on':enableAuthentication,'tools.auth_basic.realm':'GamezServer','tools.auth_basic.checkpassword':validation},
+            '/css': {'tools.staticdir.on':True,'tools.staticdir.dir':css_path},
+            '/js':{'tools.staticdir.on':True,'tools.staticdir.dir':js_path},
+            '/images':{'tools.staticdir.on':True,'tools.staticdir.dir':images_path}
         }
 
 dao = GamezServer.GamezServerDao.GamezServerDao()
@@ -815,6 +814,8 @@ GenerateSabPostProcessScript()
 logger.Log('Configuring Web Server')
 cherrypy.config.update(conffile)
 cherrypy.config.update(conf)
+cherrypy.config["tools.encode.on"] = True
+cherrypy.config["tools.encode.encoding"] = "utf-8"
 app = cherrypy.tree.mount(RunWebServer(), '/', conffile)
 app.merge(conf)
 if hasattr(cherrypy.engine, "signal_handler"):
