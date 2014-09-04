@@ -90,6 +90,7 @@ class GamesDBReader(object):
             # file.write("%s::||::%s::||::%s::||::%s::||::%s::||::%s\n" % (id, name, description.replace('\n', ''), relDate, cover, console))
             # logger.Log("ID: %s, Name: %s, Cover: %s" % (gameId, gameTitle, coverArt))
         # file.close()
+        dao.UpdateLog(self.dbfile, True)
         global fullUpdate
         fullUpdate = False
         return

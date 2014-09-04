@@ -13,6 +13,8 @@ class GamezServerDao(object):
         conn.execute(comm)
         comm = '''CREATE TABLE LOG(LogID INTEGER PRIMARY KEY NOT NULL, Message TEXT Not Null, MessageTimeStamp DATETIME NOT NULL, IsDeleted INT Not Null Default 0);'''
         conn.execute(comm)
+        comm = '''CREATE TABLE UPDATES(id INTEGER PRIMARY KEY NOT NULL, FullUpdate BOOLEAN NOT NULL DEFAULT FALSE, Time DATETIME NOT NULL);'''
+        conn.execute(comm)
         conn.close()
 
     def GetGames(self, dbFile):
@@ -154,7 +156,30 @@ class GamezServerDao(object):
     def GetConsoleByGame(self, dbFile, game):
         conn = sqlite3.connect(dbFile)
         comm = "SELECT ConsoleName from CONSOLES WHERE ConsoleID = (SELECT ConsoleID from MASTER_GAMES WHERE GameTitle = '" + game + "')"
-        print comm
         result = conn.execute(comm).fetchone()
         conn.close()
         return result
+
+    def UpdateLog(self, dbFile, fullUpdate):
+        conn = sqlite3.connect(dbFile)
+        comm = "INSERT OR IGNORE INTO UPDATES(FullUpdate,Time) VALUES(?,?)"
+        try:
+            conn.execute(comm, (fullUpdate, strftime("%Y-%m-%d %H:%M:%S", gmtime())))
+            conn.commit()
+            print('Logged update successfully.')
+        except:
+            print('Error logging update.')
+        conn.close()
+
+    def GetLastUpdateTime(self, dbFile):
+        conn = sqlite3.connect(dbFile)
+        comm = "SELECT * FROM UPDATES ORDER BY ID DESC LIMIT 1"
+        try:
+            conn.execute(comm)
+            result = conn.execute(comm).fetchone()
+            time = str(result[2])
+            print time
+            return time
+        except:
+            sel.Log('Get latest update failed.')
+        conn.close()
